@@ -1,0 +1,6 @@
+@GadgeonFinanceTracker_HostAddress = http://localhost:5274
+
+GET {{GadgeonFinanceTracker_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
