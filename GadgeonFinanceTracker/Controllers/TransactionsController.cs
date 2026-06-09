@@ -6,6 +6,8 @@ using GadgeonFinanceTracker.Repository;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Asp.Versioning;
+using Microsoft.EntityFrameworkCore;
+using GadgeonFinanceTracker.Data;
 
 namespace GadgeonFinanceTracker.Controllers
 {
@@ -18,12 +20,14 @@ namespace GadgeonFinanceTracker.Controllers
         private readonly ITransactionRepo transactionRepo;
         private readonly IMapper mapper;
         private readonly ILogger<TransactionsController> logger;
+        private readonly FinanceTrackerDBContext dbContext;
 
-        public TransactionsController(ITransactionRepo transactionRepo, IMapper mapper, ILogger<TransactionsController> logger)
+        public TransactionsController(ITransactionRepo transactionRepo, IMapper mapper, ILogger<TransactionsController> logger,FinanceTrackerDBContext dBContext)
         {
             this.transactionRepo = transactionRepo;
             this.mapper = mapper;
             this.logger = logger;
+            this.dbContext= dBContext;
         }
         [HttpGet]
         [MapToApiVersion("1.0")]
@@ -145,5 +149,47 @@ namespace GadgeonFinanceTracker.Controllers
 
             return Ok(transactionsDto);
         }
+        [HttpPost("{id}/attachment")]
+        [Authorize(Roles = "Reader")]
+        public async Task<IActionResult> UploadAttachment([FromRoute] Guid id, IFormFile file)
+        {
+            
+            var allowedTypes = new[] { "image/png",
+                                        "image/jpeg",
+                                        "image/jpg",
+                                        "image/svg+xml" };
+            if (!allowedTypes.Contains(file.ContentType))
+                return BadRequest("Only PNG or SVG images are allowed.");
+            var filename = $"{Guid.NewGuid()}_{file.FileName}";
+            var physicalPath = Path.Combine(Directory.GetCurrentDirectory(),
+            "wwwroot", "uploads", "transactions",
+            filename);
+
+            var relativePath = Path.Combine("uploads", "transactions", filename);
+
+            Directory.CreateDirectory(Path.GetDirectoryName(physicalPath)!);
+
+            using (var stream = new FileStream(physicalPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var attachment = new TransactionAttachment
+            {
+                Id = Guid.NewGuid(),
+                TransactionId = id,
+                FileName = file.FileName,
+                FilePath = relativePath,
+                ContentType = file.ContentType,
+                FileSizeBytes = file.Length
+            };
+
+            await dbContext.TransactionAttachments.AddAsync(attachment);
+            await dbContext.SaveChangesAsync();
+
+            return Ok(new { attachmentPath = relativePath });
+
+        }
+
+        }
     }
-}

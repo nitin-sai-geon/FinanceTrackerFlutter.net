@@ -12,9 +12,11 @@ namespace GadgeonFinanceTracker.Data
 
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<Category> Categories { get; set; }
-    
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+        public DbSet<TransactionAttachment> TransactionAttachments { get; set; }
+
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
@@ -22,7 +24,15 @@ namespace GadgeonFinanceTracker.Data
                .Property(t => t.Amount)
                .HasPrecision(18, 2);
 
+            modelBuilder.Entity<Transaction>()
+            .HasOne(t => t.Attachment)
+            .WithOne(a => a.Transaction)
+            .HasForeignKey<TransactionAttachment>(a => a.TransactionId);
+
             var categories = new List<Category>
+
+
+
     {
         // keep existing 4
         new Category { Id = Guid.Parse("a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1"), Name = "Salary", Type = CategoryType.Income },

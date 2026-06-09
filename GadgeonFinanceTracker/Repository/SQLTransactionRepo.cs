@@ -42,6 +42,7 @@ namespace GadgeonFinanceTracker.Repository
         {
             var transactions = dbContext.Transactions
                 .Include(t => t.Category)
+                .Include(t => t.Attachment)
                 .Where(t => t.UserId == userId)
                 .AsQueryable();
 

@@ -1,12 +1,16 @@
-﻿using GadgeonFinanceTracker.Models.DTO;
+﻿using GadgeonFinanceTracker.Data;
+using GadgeonFinanceTracker.Models.Domain;
 using GadgeonFinanceTracker.Models.DTO;
 using GadgeonFinanceTracker.Repository;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using GadgeonFinanceTracker.Models.Domain;
+using Microsoft.EntityFrameworkCore;
 
 namespace GadgeonFinanceTracker.Controllers
 {
@@ -16,10 +20,14 @@ namespace GadgeonFinanceTracker.Controllers
     {
         private readonly UserManager<ApplicationUser> userManager;
         private readonly ITokenRepo tokenRepo;
-        public AuthController(UserManager<ApplicationUser> userManager, ITokenRepo tokenRepo)
+        private readonly FinanceTrackerAuthDbContext authDbContext;
+
+        public AuthController(UserManager<ApplicationUser> userManager, ITokenRepo tokenRepo,FinanceTrackerAuthDbContext authDbContext)
         {
             this.userManager = userManager;
             this.tokenRepo = tokenRepo;
+            this.authDbContext = authDbContext;
+
         }
 
         //POST: /api/Auth/Register
@@ -60,18 +68,29 @@ namespace GadgeonFinanceTracker.Controllers
             var user = await userManager.FindByNameAsync(loginRequestDTO.Username);
             if (user != null && await userManager.CheckPasswordAsync(user, loginRequestDTO.Password))
             {
-                //token logic:
                 var roles = await userManager.GetRolesAsync(user);
 
                 if (roles != null && roles.Any())
                 {
-                    var jwttoken = tokenRepo.CreateJWTToken(user, roles.ToList());
-                    var response = new LoginResponseDTO
-                    {
-                        JwtToken = jwttoken
-                    };
-                    return Ok(response); //for future additions to login response dto like user details, roles etc we can use this response dto instead of just returning the token
+                    var jwtToken = tokenRepo.CreateJWTToken(user, roles.ToList());
+                    var refreshToken = tokenRepo.CreateRefreshToken();
 
+                    var refreshTokenEntity = new RefreshToken
+                    {
+                        Token = refreshToken,
+                        UserId = user.Id,
+                        ExpiresAt = DateTime.UtcNow.AddDays(30),
+                        IsRevoked = false
+                    };
+
+                    await authDbContext.RefreshTokens.AddAsync(refreshTokenEntity);
+                    await authDbContext.SaveChangesAsync();
+
+                    return Ok(new LoginResponseDTO
+                    {
+                        JwtToken = jwtToken,
+                        RefreshToken = refreshToken
+                    });
                 }
 
                 return Ok("Login successful");
@@ -136,6 +155,100 @@ namespace GadgeonFinanceTracker.Controllers
                 Name = user.Name,
                 Email = user.Email
             });
+        }
+
+        [HttpPost]
+        [Route("Refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequestDTO refreshRequestDTO)
+        {
+            var refreshToken = await authDbContext.RefreshTokens
+                .FirstOrDefaultAsync(r => r.Token == refreshRequestDTO.RefreshToken);
+
+            if (refreshToken == null || !refreshToken.IsActive)
+                return Unauthorized("Invalid or expired refresh token");
+
+            var user = await userManager.FindByIdAsync(refreshToken.UserId);
+            if (user == null)
+                return Unauthorized("User not found");
+
+            // revoke old token
+            refreshToken.IsRevoked = true;
+
+            // create new tokens
+            var roles = await userManager.GetRolesAsync(user);
+            var newJwtToken = tokenRepo.CreateJWTToken(user, roles.ToList());
+            var newRefreshToken = tokenRepo.CreateRefreshToken();
+
+            var newRefreshTokenEntity = new RefreshToken
+            {
+                Token = newRefreshToken,
+                UserId = user.Id,
+                ExpiresAt = DateTime.UtcNow.AddDays(30),
+                IsRevoked = false
+            };
+
+            await authDbContext.RefreshTokens.AddAsync(newRefreshTokenEntity);
+            await authDbContext.SaveChangesAsync();
+
+            return Ok(new LoginResponseDTO
+            {
+                JwtToken = newJwtToken,
+                RefreshToken = newRefreshToken
+            });
+        }
+
+        [HttpPost]
+        [Route("GoogleToken")]
+        public async Task<IActionResult> GoogleToken([FromBody] GoogleTokenRequestDTO dto)
+        {
+            try
+            {
+                // verify Google ID token
+                var payload = await Google.Apis.Auth.GoogleJsonWebSignature.ValidateAsync(dto.IdToken);
+
+                var email = payload.Email;
+                var name = payload.Name;
+
+                // find or create user
+                var user = await userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        UserName = email,
+                        Email = email,
+                        Name = name,
+                        EmailConfirmed = true
+                    };
+                    await userManager.CreateAsync(user);
+                    await userManager.AddToRolesAsync(user, new[] { "Reader" });
+                }
+
+                // generate tokens
+                var roles = await userManager.GetRolesAsync(user);
+                var jwtToken = tokenRepo.CreateJWTToken(user, roles.ToList());
+                var refreshToken = tokenRepo.CreateRefreshToken();
+
+                var refreshTokenEntity = new RefreshToken
+                {
+                    Token = refreshToken,
+                    UserId = user.Id,
+                    ExpiresAt = DateTime.UtcNow.AddDays(30),
+                    IsRevoked = false
+                };
+                await authDbContext.RefreshTokens.AddAsync(refreshTokenEntity);
+                await authDbContext.SaveChangesAsync();
+
+                return Ok(new LoginResponseDTO
+                {
+                    JwtToken = jwtToken,
+                    RefreshToken = refreshToken
+                });
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized($"Invalid Google token: {ex.Message}");
+            }
         }
     }
 }

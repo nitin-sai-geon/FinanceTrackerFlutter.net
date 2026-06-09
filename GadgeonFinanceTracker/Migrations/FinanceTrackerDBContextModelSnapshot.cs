@@ -151,6 +151,41 @@ namespace GadgeonFinanceTracker.Migrations
                     b.ToTable("Transactions");
                 });
 
+            modelBuilder.Entity("GadgeonFinanceTracker.Models.Domain.TransactionAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransactionId")
+                        .IsUnique();
+
+                    b.ToTable("TransactionAttachments");
+                });
+
             modelBuilder.Entity("GadgeonFinanceTracker.Models.Domain.Transaction", b =>
                 {
                     b.HasOne("GadgeonFinanceTracker.Models.Domain.Category", "Category")
@@ -162,9 +197,25 @@ namespace GadgeonFinanceTracker.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("GadgeonFinanceTracker.Models.Domain.TransactionAttachment", b =>
+                {
+                    b.HasOne("GadgeonFinanceTracker.Models.Domain.Transaction", "Transaction")
+                        .WithOne("Attachment")
+                        .HasForeignKey("GadgeonFinanceTracker.Models.Domain.TransactionAttachment", "TransactionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Transaction");
+                });
+
             modelBuilder.Entity("GadgeonFinanceTracker.Models.Domain.Category", b =>
                 {
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("GadgeonFinanceTracker.Models.Domain.Transaction", b =>
+                {
+                    b.Navigation("Attachment");
                 });
 #pragma warning restore 612, 618
         }

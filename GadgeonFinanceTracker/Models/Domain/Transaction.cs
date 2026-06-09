@@ -11,5 +11,7 @@
 
         // Navigation properties
         public Category Category { get; set; }
+
+        public TransactionAttachment? Attachment { get; set; }
     }
 }

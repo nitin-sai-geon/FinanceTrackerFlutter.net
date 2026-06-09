@@ -1,12 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using GadgeonFinanceTracker.Models.Domain;
 using Microsoft.AspNetCore.Identity;
-using GadgeonFinanceTracker.Models.Domain;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Threading.Tasks;
-using GadgeonFinanceTracker.Models.Domain;
 
 namespace GadgeonFinanceTracker.Data
 {
@@ -15,6 +15,7 @@ namespace GadgeonFinanceTracker.Data
         public FinanceTrackerAuthDbContext(DbContextOptions<FinanceTrackerAuthDbContext> options) : base(options)
         {
         }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -42,6 +43,12 @@ namespace GadgeonFinanceTracker.Data
             };
 
             builder.Entity<IdentityRole>().HasData(roles);
+            builder.Entity<RefreshToken>()
+           .HasOne<ApplicationUser>()
+           .WithMany()
+           .HasForeignKey(r => r.UserId)
+           .HasPrincipalKey(u => u.Id);
         }
+        
     }
 }
