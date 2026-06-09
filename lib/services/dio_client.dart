@@ -1,0 +1,28 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:finance_tracker/URLs/urls.dart';
+import 'package:finance_tracker/provider/global_state.dart';
+
+Dio buildDio(Ref ref) {
+  final dio = Dio(
+    BaseOptions(baseUrl: ApiUrls.baseUrl, contentType: 'application/json'),
+  );
+
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        final token = ref.read(currentUserProvider)?['token'] ?? '';
+        options.headers['Authorization'] = 'Bearer $token';
+        handler.next(options);
+      },
+      onError: (error, handler) async {
+        if (error.response?.statusCode == 401) {
+          await ref.read(currentUserProvider.notifier).clearUser();
+        }
+        handler.next(error);
+      },
+    ),
+  );
+
+  return dio;
+}
