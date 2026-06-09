@@ -229,12 +229,7 @@ keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -sto
 
 ---
 
-## Local Development Notes
 
-- The backend runs on HTTP for local development. Google OAuth via browser redirect requires HTTPS and is not functional locally — native Google Sign In via the Flutter app works correctly.
-- `adb reverse` is required when testing on Android emulator against a locally hosted backend.
-- File attachments are stored in `wwwroot/uploads/transactions/` and served as static files.
-- When hosting the backend publicly, update `BASE_URL` in the Flutter `.env` file to the hosted URL.
 
 ---
 
