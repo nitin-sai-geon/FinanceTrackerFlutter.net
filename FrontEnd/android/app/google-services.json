@@ -1,0 +1,37 @@
+{
+  "project_info": {
+    "project_number": "782257931063",
+    "project_id": "gadgeonfinancetracker",
+    "storage_bucket": ""
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:782257931063:android:0000000000000000",
+        "android_client_info": {
+          "package_name": "com.example.finance_tracker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "782257931063-ecn75opo7uai315di6r199aei618n94l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.finance_tracker"
+          }
+        },
+        {
+          "client_id": "782257931063-kbhc93n84264aesc4jb21t35k56pebvg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": ""
+        }
+      ],
+      "services": {}
+    }
+  ],
+  "configuration_version": "1"
+}
