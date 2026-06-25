@@ -21,20 +21,22 @@ namespace GadgeonFinanceTracker.Controllers
         private readonly UserManager<ApplicationUser> userManager;
         private readonly ITokenRepo tokenRepo;
         private readonly FinanceTrackerAuthDbContext authDbContext;
+        private readonly ILogger<AuthController> logger;
 
-        public AuthController(UserManager<ApplicationUser> userManager, ITokenRepo tokenRepo,FinanceTrackerAuthDbContext authDbContext)
+        public AuthController(UserManager<ApplicationUser> userManager, ITokenRepo tokenRepo,
+            FinanceTrackerAuthDbContext authDbContext, ILogger<AuthController> logger)
         {
             this.userManager = userManager;
             this.tokenRepo = tokenRepo;
             this.authDbContext = authDbContext;
-
+            this.logger = logger;
         }
 
-        //POST: /api/Auth/Register
         [HttpPost]
         [Route("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDTO registerRequestDTO)
         {
+            logger.LogInformation("Registration attempt for {Username}", registerRequestDTO.Username);
             var identityUser = new ApplicationUser
             {
                 UserName = registerRequestDTO.Username,
@@ -50,14 +52,22 @@ namespace GadgeonFinanceTracker.Controllers
                     identityResult = await userManager.AddToRolesAsync(identityUser, registerRequestDTO.Roles);
 
                     if (identityResult.Succeeded)
+                    {
+                        logger.LogInformation("User {Username} registered with roles {Roles}", registerRequestDTO.Username, string.Join(", ", registerRequestDTO.Roles));
                         return Ok("User Registered Successfully");
+                    }
                     else
+                    {
+                        logger.LogWarning("Role assignment failed for {Username}", registerRequestDTO.Username);
                         return BadRequest(identityResult.Errors);
+                    }
                 }
 
+                logger.LogInformation("User {Username} registered with no roles", registerRequestDTO.Username);
                 return Ok("User Registered Successfully. No roles assigned.");
             }
 
+            logger.LogWarning("Registration failed for {Username}", registerRequestDTO.Username);
             return BadRequest(identityResult.Errors);
         }
 
@@ -65,6 +75,7 @@ namespace GadgeonFinanceTracker.Controllers
         [Route("Login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginRequestDTO)
         {
+            logger.LogInformation("Login attempt for {Username}", loginRequestDTO.Username);
             var user = await userManager.FindByNameAsync(loginRequestDTO.Username);
             if (user != null && await userManager.CheckPasswordAsync(user, loginRequestDTO.Password))
             {
@@ -86,6 +97,7 @@ namespace GadgeonFinanceTracker.Controllers
                     await authDbContext.RefreshTokens.AddAsync(refreshTokenEntity);
                     await authDbContext.SaveChangesAsync();
 
+                    logger.LogInformation("User {Username} logged in successfully", loginRequestDTO.Username);
                     return Ok(new LoginResponseDTO
                     {
                         JwtToken = jwtToken,
@@ -95,6 +107,8 @@ namespace GadgeonFinanceTracker.Controllers
 
                 return Ok("Login successful");
             }
+
+            logger.LogWarning("Failed login attempt for {Username}", loginRequestDTO.Username);
             return Unauthorized("Invalid username or password");
         }
 
@@ -104,24 +118,24 @@ namespace GadgeonFinanceTracker.Controllers
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDTO updateProfileDTO)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            logger.LogInformation("Profile update request for user {UserId}", userId);
             var user = await userManager.FindByIdAsync(userId);
 
-            if (user == null) return NotFound("User not found");
+            if (user == null)
+            {
+                logger.LogWarning("Profile update failed: user {UserId} not found", userId);
+                return NotFound("User not found");
+            }
 
-            // update email
             if (!string.IsNullOrEmpty(updateProfileDTO.Email))
             {
                 user.Email = updateProfileDTO.Email;
                 user.UserName = updateProfileDTO.Email;
             }
 
-            // update name
             if (!string.IsNullOrEmpty(updateProfileDTO.Name))
-            {
                 user.Name = updateProfileDTO.Name;
-            }
 
-            // update password
             if (!string.IsNullOrEmpty(updateProfileDTO.CurrentPassword) &&
                 !string.IsNullOrEmpty(updateProfileDTO.NewPassword))
             {
@@ -129,14 +143,21 @@ namespace GadgeonFinanceTracker.Controllers
                     user, updateProfileDTO.CurrentPassword, updateProfileDTO.NewPassword);
 
                 if (!passwordResult.Succeeded)
+                {
+                    logger.LogWarning("Password change failed for user {UserId}", userId);
                     return BadRequest(passwordResult.Errors);
+                }
             }
 
             var result = await userManager.UpdateAsync(user);
 
             if (result.Succeeded)
+            {
+                logger.LogInformation("Profile updated for user {UserId}", userId);
                 return Ok("Profile updated successfully");
+            }
 
+            logger.LogWarning("Profile update failed for user {UserId}", userId);
             return BadRequest(result.Errors);
         }
 
@@ -148,13 +169,13 @@ namespace GadgeonFinanceTracker.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var user = await userManager.FindByIdAsync(userId);
 
-            if (user == null) return NotFound("User not found");
-
-            return Ok(new
+            if (user == null)
             {
-                Name = user.Name,
-                Email = user.Email
-            });
+                logger.LogWarning("Profile fetch failed: user {UserId} not found", userId);
+                return NotFound("User not found");
+            }
+
+            return Ok(new { Name = user.Name, Email = user.Email });
         }
 
         [HttpPost]
@@ -165,16 +186,20 @@ namespace GadgeonFinanceTracker.Controllers
                 .FirstOrDefaultAsync(r => r.Token == refreshRequestDTO.RefreshToken);
 
             if (refreshToken == null || !refreshToken.IsActive)
+            {
+                logger.LogWarning("Token refresh rejected: invalid or expired token");
                 return Unauthorized("Invalid or expired refresh token");
+            }
 
             var user = await userManager.FindByIdAsync(refreshToken.UserId);
             if (user == null)
+            {
+                logger.LogWarning("Token refresh rejected: user {UserId} not found", refreshToken.UserId);
                 return Unauthorized("User not found");
+            }
 
-            // revoke old token
             refreshToken.IsRevoked = true;
 
-            // create new tokens
             var roles = await userManager.GetRolesAsync(user);
             var newJwtToken = tokenRepo.CreateJWTToken(user, roles.ToList());
             var newRefreshToken = tokenRepo.CreateRefreshToken();
@@ -190,6 +215,7 @@ namespace GadgeonFinanceTracker.Controllers
             await authDbContext.RefreshTokens.AddAsync(newRefreshTokenEntity);
             await authDbContext.SaveChangesAsync();
 
+            logger.LogInformation("Tokens refreshed for user {UserId}", user.Id);
             return Ok(new LoginResponseDTO
             {
                 JwtToken = newJwtToken,
@@ -203,16 +229,14 @@ namespace GadgeonFinanceTracker.Controllers
         {
             try
             {
-                // verify Google ID token
                 var payload = await Google.Apis.Auth.GoogleJsonWebSignature.ValidateAsync(dto.IdToken);
-
                 var email = payload.Email;
                 var name = payload.Name;
 
-                // find or create user
                 var user = await userManager.FindByEmailAsync(email);
                 if (user == null)
                 {
+                    logger.LogInformation("Creating new user for Google account {Email}", email);
                     user = new ApplicationUser
                     {
                         UserName = email,
@@ -224,7 +248,6 @@ namespace GadgeonFinanceTracker.Controllers
                     await userManager.AddToRolesAsync(user, new[] { "Reader" });
                 }
 
-                // generate tokens
                 var roles = await userManager.GetRolesAsync(user);
                 var jwtToken = tokenRepo.CreateJWTToken(user, roles.ToList());
                 var refreshToken = tokenRepo.CreateRefreshToken();
@@ -239,6 +262,7 @@ namespace GadgeonFinanceTracker.Controllers
                 await authDbContext.RefreshTokens.AddAsync(refreshTokenEntity);
                 await authDbContext.SaveChangesAsync();
 
+                logger.LogInformation("Google sign-in successful for {Email}", email);
                 return Ok(new LoginResponseDTO
                 {
                     JwtToken = jwtToken,
@@ -247,6 +271,7 @@ namespace GadgeonFinanceTracker.Controllers
             }
             catch (Exception ex)
             {
+                logger.LogWarning(ex, "Google token validation failed");
                 return Unauthorized($"Invalid Google token: {ex.Message}");
             }
         }

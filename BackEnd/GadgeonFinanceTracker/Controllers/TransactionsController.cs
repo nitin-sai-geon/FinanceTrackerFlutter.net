@@ -44,7 +44,9 @@ namespace GadgeonFinanceTracker.Controllers
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                logger.LogInformation("Fetching transactions for user {UserId} (page {Page}, size {Size})", userId, pageNumber, pageSize);
                 var transactionsDomain = await transactionRepo.GetAllByUserIdAsync(userId, categoryId, fromDate, toDate, sortBy, isAscending, pageNumber, pageSize);
+                logger.LogInformation("Returned {Count} transactions for user {UserId}", transactionsDomain.Count, userId);
                 var transactionsDTO = mapper.Map<List<TransactionRequestDTO>>(transactionsDomain);
                 return Ok(transactionsDTO);
             }
@@ -54,6 +56,7 @@ namespace GadgeonFinanceTracker.Controllers
                 return StatusCode(500, "An error occurred while fetching transactions.");
             }
         }
+
         [HttpPost]
         [Authorize(Roles = "Reader")]
         public async Task<IActionResult> Create([FromBody] AddTransactionDTO transactionRequestDTO)
@@ -61,9 +64,11 @@ namespace GadgeonFinanceTracker.Controllers
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                logger.LogInformation("Creating transaction for user {UserId}: {Description} {Amount}", userId, transactionRequestDTO.Description, transactionRequestDTO.Amount);
                 var transactionDomain = mapper.Map<Transaction>(transactionRequestDTO);
                 transactionDomain.UserId = userId;
                 var createdTransaction = await transactionRepo.CreateAsync(transactionDomain);
+                logger.LogInformation("Transaction created with Id {Id} for user {UserId}", createdTransaction.Id, userId);
                 var createdTransactionDTO = mapper.Map<TransactionRequestDTO>(createdTransaction);
                 return CreatedAtAction(nameof(GetAll), new { id = createdTransaction.Id }, createdTransactionDTO);
             }
@@ -73,6 +78,7 @@ namespace GadgeonFinanceTracker.Controllers
                 return StatusCode(500, "An error occurred while creating the transaction.");
             }
         }
+
         [HttpPut("{id:Guid}")]
         [Authorize(Roles = "Reader")]
         public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateTransactionDTO transactionRequestDTO)
@@ -80,15 +86,15 @@ namespace GadgeonFinanceTracker.Controllers
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-                // map first
+                logger.LogInformation("Updating transaction {Id} for user {UserId}", id, userId);
                 var transactionDomain = mapper.Map<Transaction>(transactionRequestDTO);
-
-                // then update with ownership check
                 var updatedTransaction = await transactionRepo.UpdateAsync(id, userId, transactionDomain);
                 if (updatedTransaction == null)
+                {
+                    logger.LogWarning("Transaction {Id} not found or not owned by user {UserId}", id, userId);
                     return NotFound("Transaction not found or you don't have permission to update it.");
-
+                }
+                logger.LogInformation("Transaction {Id} updated for user {UserId}", id, userId);
                 var updatedTransactionDTO = mapper.Map<TransactionRequestDTO>(updatedTransaction);
                 return Ok(updatedTransactionDTO);
             }
@@ -106,9 +112,14 @@ namespace GadgeonFinanceTracker.Controllers
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                logger.LogInformation("Deleting transaction {Id} for user {UserId}", id, userId);
                 var deletedTransaction = await transactionRepo.DeleteAsync(id, userId);
                 if (deletedTransaction == null)
+                {
+                    logger.LogWarning("Transaction {Id} not found or not owned by user {UserId}", id, userId);
                     return NotFound("Transaction not found or you don't have permission to delete it.");
+                }
+                logger.LogInformation("Transaction {Id} deleted for user {UserId}", id, userId);
                 var deletedTransactionDTO = mapper.Map<TransactionRequestDTO>(deletedTransaction);
                 return Ok(deletedTransactionDTO);
             }
@@ -118,6 +129,7 @@ namespace GadgeonFinanceTracker.Controllers
                 return StatusCode(500, "An error occurred while deleting the transaction.");
             }
         }
+
         [HttpGet]
         [MapToApiVersion("2.0")]
         [Authorize(Roles = "Reader")]
@@ -131,10 +143,10 @@ namespace GadgeonFinanceTracker.Controllers
         [FromQuery] int pageSize = 10)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            logger.LogInformation("Fetching transactions v2 for user {UserId} (page {Page}, size {Size})", userId, pageNumber, pageSize);
             var walkDomainModel = await transactionRepo.GetAllByUserIdAsync(
                 userId, categoryId, fromDate, toDate, sortBy, isAscending, pageNumber, pageSize);
 
-            // map to a v2 DTO that includes category type
             var transactionsDto = walkDomainModel.Select(t => new
             {
                 t.Id,
@@ -144,27 +156,26 @@ namespace GadgeonFinanceTracker.Controllers
                 t.UserId,
                 CategoryId = t.CategoryId,
                 CategoryName = t.Category?.Name,
-                CategoryType = t.Category?.Type.ToString() // ← new field in v2
+                CategoryType = t.Category?.Type.ToString()
             });
 
             return Ok(transactionsDto);
         }
+
         [HttpPost("{id}/attachment")]
         [Authorize(Roles = "Reader")]
         public async Task<IActionResult> UploadAttachment([FromRoute] Guid id, IFormFile file)
         {
-            
-            var allowedTypes = new[] { "image/png",
-                                        "image/jpeg",
-                                        "image/jpg",
-                                        "image/svg+xml" };
+            var allowedTypes = new[] { "image/png", "image/jpeg", "image/jpg", "image/svg+xml" };
             if (!allowedTypes.Contains(file.ContentType))
+            {
+                logger.LogWarning("Rejected attachment upload for transaction {Id}: invalid type {ContentType}", id, file.ContentType);
                 return BadRequest("Only PNG or SVG images are allowed.");
-            var filename = $"{Guid.NewGuid()}_{file.FileName}";
-            var physicalPath = Path.Combine(Directory.GetCurrentDirectory(),
-            "wwwroot", "uploads", "transactions",
-            filename);
+            }
 
+            logger.LogInformation("Uploading attachment for transaction {Id}: {FileName} ({Size} bytes)", id, file.FileName, file.Length);
+            var filename = $"{Guid.NewGuid()}_{file.FileName}";
+            var physicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "transactions", filename);
             var relativePath = Path.Combine("uploads", "transactions", filename);
 
             Directory.CreateDirectory(Path.GetDirectoryName(physicalPath)!);
@@ -187,8 +198,8 @@ namespace GadgeonFinanceTracker.Controllers
             await dbContext.TransactionAttachments.AddAsync(attachment);
             await dbContext.SaveChangesAsync();
 
+            logger.LogInformation("Attachment saved for transaction {Id} at {Path}", id, relativePath);
             return Ok(new { attachmentPath = relativePath });
-
         }
 
         }

@@ -15,16 +15,20 @@ namespace GadgeonFinanceTracker.Controllers
     {
         private readonly UserManager<ApplicationUser> userManager;
         private readonly ITokenRepo tokenRepo;
+        private readonly ILogger<GoogleAuthController> logger;
 
-        public GoogleAuthController(UserManager<ApplicationUser> userManager, ITokenRepo tokenRepo)
+        public GoogleAuthController(UserManager<ApplicationUser> userManager, ITokenRepo tokenRepo,
+            ILogger<GoogleAuthController> logger)
         {
             this.userManager = userManager;
             this.tokenRepo = tokenRepo;
+            this.logger = logger;
         }
 
         [HttpGet("login")]
         public IActionResult Login([FromQuery] string? sessionId)
         {
+            logger.LogInformation("Google OAuth flow initiated (sessionId: {SessionId})", sessionId);
             var properties = new AuthenticationProperties
             {
                 RedirectUri = Url.Action("Callback", "GoogleAuth"),
@@ -38,17 +42,26 @@ namespace GadgeonFinanceTracker.Controllers
         [FromServices] Dictionary<string, string?> sessionStore)
         {
             var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            if (!result.Succeeded) return Unauthorized();
+            if (!result.Succeeded)
+            {
+                logger.LogWarning("Google OAuth callback authentication failed");
+                return Unauthorized();
+            }
 
             var email = result.Principal.FindFirst(ClaimTypes.Email)?.Value;
             var name = result.Principal.FindFirst(ClaimTypes.Name)?.Value;
             var sessionId = result.Properties.Items.TryGetValue("sessionId", out var sid) ? sid : null;
 
-            if (string.IsNullOrEmpty(email)) return Unauthorized();
+            if (string.IsNullOrEmpty(email))
+            {
+                logger.LogWarning("Google OAuth callback: no email in principal");
+                return Unauthorized();
+            }
 
             var user = await userManager.FindByEmailAsync(email);
             if (user == null)
             {
+                logger.LogInformation("Creating new user for Google account {Email}", email);
                 user = new ApplicationUser
                 {
                     UserName = email,
@@ -66,6 +79,7 @@ namespace GadgeonFinanceTracker.Controllers
             if (sessionId != null)
                 sessionStore[sessionId] = token;
 
+            logger.LogInformation("Google OAuth callback completed for {Email} (sessionId: {SessionId})", email, sessionId);
             return Content("<html><body><h2>Sign in successful. Return to the app.</h2></body></html>", "text/html");
         }
 
@@ -75,13 +89,12 @@ namespace GadgeonFinanceTracker.Controllers
         {
             if (sessionStore.TryGetValue(sessionId, out var token) && token != null)
             {
-                sessionStore.Remove(sessionId); // clean up after use
+                sessionStore.Remove(sessionId);
+                logger.LogInformation("Session {SessionId} claimed and removed", sessionId);
                 return Ok(new { status = "completed", jwtToken = token });
             }
 
             return Ok(new { status = "pending" });
         }
-
-
     }
 }
