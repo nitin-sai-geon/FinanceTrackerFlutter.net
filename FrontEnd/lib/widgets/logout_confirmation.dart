@@ -27,30 +27,30 @@ class LogoutConfirmation extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return AlertDialog(
-      backgroundColor: HomeScreenStyles.background,
+      backgroundColor: HomeScreenStyles.bgOf(context),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
+      title: Text(
         'Log Out',
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: HomeScreenStyles.onBackground,
+          color: HomeScreenStyles.onBgOf(context),
         ),
       ),
-      content: const Text(
+      content: Text(
         'Are you sure you want to log out?',
         style: TextStyle(
           fontSize: 14,
-          color: HomeScreenStyles.secondary,
+          color: HomeScreenStyles.secondaryOf(context),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text(
+          child: Text(
             'Cancel',
             style: TextStyle(
-              color: HomeScreenStyles.secondary,
+              color: HomeScreenStyles.secondaryOf(context),
               fontWeight: FontWeight.w500,
             ),
           ),

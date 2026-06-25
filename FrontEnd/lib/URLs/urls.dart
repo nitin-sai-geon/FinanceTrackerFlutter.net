@@ -1,8 +1,8 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 class ApiUrls {
-  static String get baseUrl =>
-      dotenv.env['BASE_URL'] ?? 'http://10.0.2.2:5274/api';
+  static const String baseUrl = String.fromEnvironment(
+    'BASE_URL',
+    defaultValue: 'http://10.0.2.2:5274/api',
+  );
 
   static String get googleLogin => '$baseUrl/GoogleAuth/login';
   static String get googleToken => '$baseUrl/Auth/GoogleToken';

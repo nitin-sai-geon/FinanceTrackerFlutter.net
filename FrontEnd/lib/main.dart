@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_tracker/auth/session_manager.dart';
@@ -8,6 +7,8 @@ import 'package:finance_tracker/login_page.dart';
 import 'package:finance_tracker/screens/tabs.dart';
 import 'package:finance_tracker/provider/global_state.dart';
 import 'package:finance_tracker/themes/theme.dart';
+
+final navigatorKey = GlobalKey<NavigatorState>();
 
 class _ThemeModeNotifier extends Notifier<bool> {
   _ThemeModeNotifier(this._initial);
@@ -34,14 +35,13 @@ final themeModeProvider =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
 
   final prefs = await SharedPreferences.getInstance();
   final savedDark = prefs.getBool('dark_mode') ?? false;
 
   try {
     await GoogleSignIn.instance.initialize(
-      serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'],
+      serverClientId: const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
     );
   } catch (e) {
     debugPrint('GoogleSignIn init error: $e');
@@ -63,6 +63,7 @@ class _App extends ConsumerWidget {
     final isDarkMode = ref.watch(themeModeProvider);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
@@ -108,10 +109,11 @@ class _SplashGateState extends ConsumerState<_SplashGate> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFF9F9F9),
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: cs.surface,
       body: Center(
-        child: CircularProgressIndicator(color: Colors.black),
+        child: CircularProgressIndicator(color: cs.primary),
       ),
     );
   }

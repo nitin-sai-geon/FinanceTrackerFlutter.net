@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    // REMOVED: id("kotlin-android") to migrate to Built-in Kotlin
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
 }
@@ -15,10 +15,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     defaultConfig {
         applicationId = "com.example.finance_tracker"
         minSdk = flutter.minSdkVersion
@@ -31,6 +27,15 @@ android {
         release {
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+
+    // REMOVED: legacy kotlinOptions block
+}
+
+// ADDED: Modern Built-in Kotlin target configuration
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 

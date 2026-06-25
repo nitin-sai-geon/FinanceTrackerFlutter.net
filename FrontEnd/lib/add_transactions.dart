@@ -14,8 +14,11 @@ class AddTransactionsScreen extends ConsumerStatefulWidget {
 class _AddTransactionsScreenState extends ConsumerState<AddTransactionsScreen> {
   final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
+  final _newCategoryController = TextEditingController();
   String? selectedCategoryId;
   DateTime? selectedDate;
+  int _newCategoryType = 1;
+  bool _isCreatingCategory = false;
 
   @override
   void initState() {
@@ -29,7 +32,25 @@ class _AddTransactionsScreenState extends ConsumerState<AddTransactionsScreen> {
   void dispose() {
     _descriptionController.dispose();
     _amountController.dispose();
+    _newCategoryController.dispose();
     super.dispose();
+  }
+
+  Future<void> _createCategory() async {
+    final name = _newCategoryController.text.trim();
+    if (name.isEmpty) return;
+    try {
+      final created = await ref
+          .read(categoriesProvider.notifier)
+          .createCategory(name, _newCategoryType);
+      _newCategoryController.clear();
+      setState(() {
+        selectedCategoryId = created['id']?.toString();
+        _isCreatingCategory = false;
+      });
+    } catch (e) {
+      debugPrint('createCategory error: $e');
+    }
   }
 
   Future<void> pickDate() async {
@@ -163,6 +184,93 @@ class _AddTransactionsScreenState extends ConsumerState<AddTransactionsScreen> {
               }).toList(),
               onChanged: (value) => setState(() => selectedCategoryId = value),
             ),
+            const SizedBox(height: 8),
+            if (_isCreatingCategory) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _newCategoryController,
+                      style: HomeScreenStyles.formInputStyleOf(context),
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Category name',
+                        hintStyle: TextStyle(
+                          color: HomeScreenStyles.mutedOf(context),
+                        ),
+                        enabledBorder:
+                            HomeScreenStyles.formInputBorderOf(context),
+                        focusedBorder:
+                            HomeScreenStyles.formFocusedBorderOf(context),
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => setState(() => _newCategoryType =
+                        _newCategoryType == 1 ? 0 : 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: HomeScreenStyles.borderOf(context)),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _newCategoryType == 1 ? 'Expense' : 'Income',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: HomeScreenStyles.secondaryOf(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: _createCategory,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Add',
+                      style: TextStyle(
+                        color: HomeScreenStyles.primaryOf(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close,
+                        size: 18,
+                        color: HomeScreenStyles.mutedOf(context)),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () =>
+                        setState(() => _isCreatingCategory = false),
+                  ),
+                ],
+              ),
+            ] else
+              TextButton.icon(
+                onPressed: () =>
+                    setState(() => _isCreatingCategory = true),
+                icon: Icon(Icons.add,
+                    size: 16,
+                    color: HomeScreenStyles.secondaryOf(context)),
+                label: Text(
+                  'New category',
+                  style: TextStyle(
+                    color: HomeScreenStyles.secondaryOf(context),
+                    fontSize: 13,
+                  ),
+                ),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+              ),
             const SizedBox(height: 20),
             Text('DATE', style: HomeScreenStyles.fieldLabelOf(context)),
             const SizedBox(height: 4),

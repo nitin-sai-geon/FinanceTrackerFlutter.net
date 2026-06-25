@@ -108,24 +108,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _onTransactionDismissed(Map<String, dynamic> transaction) {
     ref.read(transactionsProvider.notifier).removeTransaction(transaction);
-    ScaffoldMessenger.of(context).clearSnackBars();
-    final controller = ScaffoldMessenger.of(context).showSnackBar(
+    bool undone = false;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    final controller = messenger.showSnackBar(
       SnackBar(
         content: Text('${transaction['description']} deleted'),
-        duration: const Duration(seconds: 5),
+        duration: const Duration(seconds: 4),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
+            undone = true;
             ref.read(transactionsProvider.notifier).addTransaction(transaction);
           },
         ),
       ),
     );
-    controller.closed.then((reason) {
-      if (reason != SnackBarClosedReason.action) {
-        ref
+    Future.delayed(const Duration(milliseconds: 4500), () async {
+      if (undone || !mounted) return;
+      controller.close();
+      try {
+        await ref
             .read(transactionsProvider.notifier)
             .deleteTransactionApi(transaction);
+      } catch (e) {
+        debugPrint('delete failed: $e');
+        if (!mounted) return;
+        ref.read(transactionsProvider.notifier).addTransaction(transaction);
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Failed to delete transaction')),
+        );
       }
     });
   }
