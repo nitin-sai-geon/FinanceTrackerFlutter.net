@@ -59,15 +59,14 @@ class TransactionNotifier extends Notifier<List<Map<String, dynamic>>> {
         'pageNumber': '$page',
       },
     );
-    final decoded = response.data;
+    final decoded = response.data; //dio response body -JSON decoded
     List<dynamic> data;
     if (decoded is List) {
       data = decoded;
     } else if (decoded is Map) {
-      data = (decoded['data'] ??
-              decoded['items'] ??
-              decoded['transactions'] ??
-              []) as List<dynamic>;
+      data =
+          (decoded['data'] ?? decoded['items'] ?? decoded['transactions'] ?? [])
+              as List<dynamic>;
     } else {
       data = [];
     }
@@ -110,7 +109,8 @@ class TransactionNotifier extends Notifier<List<Map<String, dynamic>>> {
           .set(page.length == _pageSize);
     } on DioException catch (e) {
       final msg =
-          e.response?.data?['message'] as String? ?? 'Could not connect to server';
+          e.response?.data?['message'] as String? ??
+          'Could not connect to server';
       ref.read(transactionsErrorProvider.notifier).set(msg);
     } catch (_) {
       ref
@@ -179,10 +179,12 @@ class TransactionNotifier extends Notifier<List<Map<String, dynamic>>> {
       if (decoded is List) {
         data = decoded;
       } else if (decoded is Map) {
-        data = (decoded['data'] ??
-                decoded['items'] ??
-                decoded['transactions'] ??
-                []) as List<dynamic>;
+        data =
+            (decoded['data'] ??
+                    decoded['items'] ??
+                    decoded['transactions'] ??
+                    [])
+                as List<dynamic>;
       } else {
         data = [];
       }
@@ -228,9 +230,26 @@ class TransactionNotifier extends Notifier<List<Map<String, dynamic>>> {
 
   Future<void> deleteTransactionApi(Map<String, dynamic> transaction) async {
     final id = transaction['id']?.toString();
-    if (id == null) return;
-    final dio = buildDio(ref);
-    await dio.delete<dynamic>(ApiUrls.transactionById(id));
+    if (id == null) {
+      debugPrint(
+        'deleteTransactionApi: missing id, keys=${transaction.keys.toList()}',
+      );
+      throw Exception('Transaction ID missing');
+    }
+    debugPrint('deleteTransactionApi: DELETE ${ApiUrls.transactionById(id)}');
+    try {
+      final dio = buildDio(ref);
+      await dio.delete<dynamic>(ApiUrls.transactionById(id));
+      debugPrint('deleteTransactionApi: success');
+    } on DioException catch (e) {
+      debugPrint(
+        'deleteTransactionApi: status=${e.response?.statusCode} data=${e.response?.data} msg=${e.message}',
+      );
+      rethrow;
+    } catch (e) {
+      debugPrint('deleteTransactionApi: $e');
+      rethrow;
+    }
   }
 
   Future<String> uploadAttachment(
@@ -280,14 +299,17 @@ class _NullableStringNotifier extends Notifier<String?> {
   void set(String? v) => state = v;
 }
 
-final transactionsLoadingProvider =
-    NotifierProvider<_BoolNotifier, bool>(_BoolNotifier.new);
+final transactionsLoadingProvider = NotifierProvider<_BoolNotifier, bool>(
+  _BoolNotifier.new,
+);
 
-final transactionsLoadingMoreProvider =
-    NotifierProvider<_BoolNotifier, bool>(_BoolNotifier.new);
+final transactionsLoadingMoreProvider = NotifierProvider<_BoolNotifier, bool>(
+  _BoolNotifier.new,
+);
 
-final transactionsHasMoreProvider =
-    NotifierProvider<_BoolNotifier, bool>(_BoolNotifier.new);
+final transactionsHasMoreProvider = NotifierProvider<_BoolNotifier, bool>(
+  _BoolNotifier.new,
+);
 
 final transactionsErrorProvider =
     NotifierProvider<_NullableStringNotifier, String?>(
@@ -396,6 +418,17 @@ class CategoryNotifier extends Notifier<List<Map<String, dynamic>>> {
     } on DioException catch (e) {
       debugPrint('loadCategories error: $e');
     }
+  }
+
+  Future<Map<String, dynamic>> createCategory(String name, int type) async {
+    final dio = buildDio(ref);
+    final response = await dio.post<dynamic>(
+      ApiUrls.categories,
+      data: {'name': name, 'type': type},
+    );
+    final created = response.data as Map<String, dynamic>;
+    state = [...state, created];
+    return created;
   }
 }
 

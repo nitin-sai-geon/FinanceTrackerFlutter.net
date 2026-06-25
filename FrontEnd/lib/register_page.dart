@@ -47,8 +47,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: RegisterStyles.backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
@@ -56,43 +56,47 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              const Text('Create Account', style: RegisterStyles.headlineText),
+              Text('Create Account', style: RegisterStyles.headlineOf(context)),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Enter your details to get started.',
-                style: RegisterStyles.subtitleText,
+                style: RegisterStyles.subtitleOf(context),
               ),
               const SizedBox(height: 40),
-              const Text('Name', style: RegisterStyles.fieldLabelText),
+              Text('Name', style: RegisterStyles.fieldLabelOf(context)),
               const SizedBox(height: 4),
               TextField(
                 controller: _nameController,
-                style: const TextStyle(fontSize: 16, color: Color(0xFF1A1C1C)),
-                decoration: RegisterStyles.fieldDecoration('Your full name'),
+                style: TextStyle(fontSize: 16, color: cs.onSurface),
+                decoration:
+                    RegisterStyles.fieldDecorationOf(context, 'Your full name'),
               ),
               const SizedBox(height: 32),
-              const Text('Username', style: RegisterStyles.fieldLabelText),
+              Text('Username', style: RegisterStyles.fieldLabelOf(context)),
               const SizedBox(height: 4),
               TextField(
                 controller: _usernameController,
                 keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(fontSize: 16, color: Color(0xFF1A1C1C)),
-                decoration: RegisterStyles.fieldDecoration('Enter your username'),
+                style: TextStyle(fontSize: 16, color: cs.onSurface),
+                decoration: RegisterStyles.fieldDecorationOf(
+                    context, 'Enter your username'),
               ),
               const SizedBox(height: 32),
-              const Text('Password', style: RegisterStyles.fieldLabelText),
+              Text('Password', style: RegisterStyles.fieldLabelOf(context)),
               const SizedBox(height: 4),
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
-                style: const TextStyle(fontSize: 16, color: Color(0xFF1A1C1C)),
-                decoration: RegisterStyles.fieldDecoration('Create a password').copyWith(
+                style: TextStyle(fontSize: 16, color: cs.onSurface),
+                decoration: RegisterStyles.fieldDecorationOf(
+                        context, 'Create a password')
+                    .copyWith(
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
-                      color: const Color(0xFF5E5E5E),
+                      color: cs.secondary,
                       size: 20,
                     ),
                     onPressed: () =>
@@ -106,11 +110,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                 height: 56,
                 child: ElevatedButton(
                   onPressed: register,
-                  style: RegisterStyles.primaryButtonStyle,
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Sign Up', style: RegisterStyles.primaryButtonText),
+                      Text(
+                        'Sign Up',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
                       SizedBox(width: 8),
                       Icon(Icons.arrow_forward, size: 18),
                     ],
@@ -120,12 +127,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
               const SizedBox(height: 40),
               Row(
                 children: [
-                  Expanded(child: Divider(color: Colors.grey[300])),
+                  Expanded(child: Divider(color: cs.outlineVariant)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('OR', style: RegisterStyles.orDividerText),
+                    child: Text('OR',
+                        style: RegisterStyles.orDividerOf(context)),
                   ),
-                  Expanded(child: Divider(color: Colors.grey[300])),
+                  Expanded(child: Divider(color: cs.outlineVariant)),
                 ],
               ),
               const SizedBox(height: 24),
@@ -134,26 +142,25 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                 height: 56,
                 child: OutlinedButton(
                   onPressed: isGoogleLoading ? null : signInWithGoogle,
-                  style: RegisterStyles.googleButtonStyle,
                   child: isGoogleLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.black,
+                            color: cs.onSurface,
                           ),
                         )
-                      : const Row(
+                      : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.g_mobiledata,
-                                size: 28, color: Colors.black),
-                            SizedBox(width: 8),
+                                size: 28, color: cs.onSurface),
+                            const SizedBox(width: 8),
                             Text(
                               'Continue with Google',
                               style:
-                                  TextStyle(color: Colors.black, fontSize: 16),
+                                  TextStyle(color: cs.onSurface, fontSize: 16),
                             ),
                           ],
                         ),
@@ -164,9 +171,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Already have an account? ',
-                      style: RegisterStyles.footerText,
+                      style: RegisterStyles.footerOf(context),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pushReplacement(
@@ -179,9 +186,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text(
+                      child: Text(
                         'Sign In',
-                        style: RegisterStyles.signInText,
+                        style: RegisterStyles.signInOf(context),
                       ),
                     ),
                   ],

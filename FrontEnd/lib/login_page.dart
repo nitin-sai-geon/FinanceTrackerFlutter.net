@@ -6,7 +6,6 @@ import 'package:finance_tracker/auth/google_sign_in_mixin.dart';
 import 'package:finance_tracker/register_page.dart';
 import 'package:finance_tracker/styles/login_styles.dart';
 import 'package:finance_tracker/screens/tabs.dart';
-import 'package:finance_tracker/themes/theme.dart';
 import 'package:finance_tracker/main.dart' show themeModeProvider;
 import 'package:finance_tracker/provider/global_state.dart';
 import 'package:finance_tracker/URLs/urls.dart';
@@ -98,10 +97,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: AppTheme.lightTheme,
-      child: Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
@@ -109,23 +106,23 @@ class _LoginPageState extends ConsumerState<LoginPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-              const Text('Welcome Back', style: LoginStyles.headlineText),
+              Text('Welcome Back', style: LoginStyles.headlineOf(context)),
               const SizedBox(height: 4),
               Text(
                 'Enter your details to access your account.',
-                style: LoginStyles.subtitleText,
+                style: LoginStyles.subtitleOf(context),
               ),
               const SizedBox(height: 40),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: LoginStyles.emailDecoration,
+                decoration: LoginStyles.emailDecorationOf(context),
               ),
               const SizedBox(height: 24),
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
-                decoration: LoginStyles.passwordDecoration.copyWith(
+                decoration: LoginStyles.passwordDecorationOf(context).copyWith(
                   suffixIcon: IconButton(
                     icon: Icon(_obscurePassword
                         ? Icons.visibility_off
@@ -147,7 +144,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   ),
                   child: Text(
                     'Forgot Password?',
-                    style: LoginStyles.forgotPasswordText,
+                    style: LoginStyles.forgotPasswordOf(context),
                   ),
                 ),
               ),
@@ -157,20 +154,23 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 height: 56,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : login,
-                  style: LoginStyles.signInButtonStyle,
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: cs.onPrimary,
                           ),
                         )
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('Sign In', style: LoginStyles.signInText),
+                            Text(
+                              'Sign In',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w500),
+                            ),
                             SizedBox(width: 8),
                             Icon(Icons.arrow_forward),
                           ],
@@ -180,12 +180,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
               const SizedBox(height: 40),
               Row(
                 children: [
-                  Expanded(child: Divider(color: Colors.grey[300])),
+                  Expanded(
+                      child: Divider(color: cs.outlineVariant)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('OR', style: LoginStyles.orDividerText),
+                    child: Text('OR', style: LoginStyles.orDividerOf(context)),
                   ),
-                  Expanded(child: Divider(color: Colors.grey[300])),
+                  Expanded(
+                      child: Divider(color: cs.outlineVariant)),
                 ],
               ),
               const SizedBox(height: 24),
@@ -194,26 +196,25 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 height: 56,
                 child: OutlinedButton(
                   onPressed: isGoogleLoading ? null : signInWithGoogle,
-                  style: LoginStyles.googleButtonStyle,
                   child: isGoogleLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.black,
+                            color: cs.onSurface,
                           ),
                         )
-                      : const Row(
+                      : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.g_mobiledata,
-                                size: 28, color: Colors.black),
-                            SizedBox(width: 8),
+                                size: 28, color: cs.onSurface),
+                            const SizedBox(width: 8),
                             Text(
                               'Continue with Google',
-                              style:
-                                  TextStyle(color: Colors.black, fontSize: 16),
+                              style: TextStyle(
+                                  color: cs.onSurface, fontSize: 16),
                             ),
                           ],
                         ),
@@ -226,7 +227,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   children: [
                     Text(
                       "Don't have an account?",
-                      style: LoginStyles.footerText,
+                      style: LoginStyles.footerOf(context),
                     ),
                     TextButton(
                       onPressed: () {
@@ -242,9 +243,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text(
+                      child: Text(
                         'Sign Up',
-                        style: LoginStyles.signUpText,
+                        style: LoginStyles.signUpOf(context),
                       ),
                     ),
                   ],
@@ -254,6 +255,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
           ),
         ),
       ),
-    ));
+    );
   }
 }

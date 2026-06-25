@@ -309,11 +309,12 @@ class _EditProfileModalState extends ConsumerState<_EditProfileModal> {
               onPressed: _isSaving ? null : _save,
               style: HomeScreenStyles.formSaveButtonStyleOf(context),
               child: _isSaving
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Theme.of(context).colorScheme.onPrimary),
                     )
                   : const Text('Save Changes',
                       style: TextStyle(

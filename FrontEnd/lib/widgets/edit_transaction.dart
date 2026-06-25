@@ -104,17 +104,21 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
       final pngBytes = Uint8List.fromList(img.encodePng(decoded));
       final path = await ref
           .read(transactionsProvider.notifier)
-          .uploadAttachment(id, pngBytes, '${picked.name.split('.').first}.png');
+          .uploadAttachment(
+            id,
+            pngBytes,
+            '${picked.name.split('.').first}.png',
+          );
       if (!mounted) return;
       setState(() => _attachmentPath = path);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Attachment uploaded')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Attachment uploaded')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
@@ -257,12 +261,14 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                 height: 160,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, _) => Container(
+                errorBuilder: (_, _, _) => Container(
                   height: 160,
                   color: HomeScreenStyles.surfaceOf(context),
                   child: Center(
-                    child: Icon(Icons.broken_image_outlined,
-                        color: HomeScreenStyles.mutedOf(context)),
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: HomeScreenStyles.mutedOf(context),
+                    ),
                   ),
                 ),
               ),
@@ -299,12 +305,12 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
               onPressed: _isSaving ? null : _save,
               style: HomeScreenStyles.formSaveButtonStyleOf(context),
               child: _isSaving
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     )
                   : const Text(

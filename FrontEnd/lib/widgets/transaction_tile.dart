@@ -55,7 +55,11 @@ class TransactionTile extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: HomeScreenStyles.iconContainerOf(context),
-              child: Icon(icon, color: HomeScreenStyles.primaryOf(context), size: 22),
+              child: Icon(
+                icon,
+                color: HomeScreenStyles.primaryOf(context),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -76,8 +80,11 @@ class TransactionTile extends StatelessWidget {
             ),
             if (transaction['attachmentPath'] != null)
               IconButton(
-                icon: Icon(Icons.attach_file,
-                    size: 16, color: HomeScreenStyles.mutedOf(context)),
+                icon: Icon(
+                  Icons.attach_file,
+                  size: 16,
+                  color: HomeScreenStyles.mutedOf(context),
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onPressed: () => showDialog(
@@ -88,7 +95,7 @@ class TransactionTile extends StatelessWidget {
                       child: Image.network(
                         ApiUrls.attachmentUrl(transaction['attachmentPath']),
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, e) => const Padding(
+                        errorBuilder: (_, _, e) => const Padding(
                           padding: EdgeInsets.all(24),
                           child: Icon(Icons.broken_image_outlined, size: 48),
                         ),
@@ -97,7 +104,10 @@ class TransactionTile extends StatelessWidget {
                   ),
                 ),
               ),
-            Text(_formatAmount(), style: HomeScreenStyles.transactionAmountOf(context)),
+            Text(
+              _formatAmount(),
+              style: HomeScreenStyles.transactionAmountOf(context),
+            ),
             const SizedBox(width: 8),
             IconButton(
               icon: Icon(

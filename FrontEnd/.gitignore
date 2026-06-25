@@ -1,4 +1,6 @@
 .env
+env.json
+secrets.json
 # Miscellaneous
 *.class
 *.log
